@@ -6,9 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"earthly-vault-provider/pkg/vault"
+
 	"github.com/earthly/earthly/util/cliutil"
-	vault "github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
+	"github.com/moby/buildkit/session/secrets"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,7 +50,7 @@ func New() *Provider {
 	return &Provider{}
 }
 
-func (p *Provider) LoadSecretFetcher() (*SecretFetcher, error) {
+func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -71,18 +74,14 @@ func (p *Provider) LoadSecretFetcher() (*SecretFetcher, error) {
 		return nil, err
 	}
 
-	apiConfig := vault.DefaultConfig()
+	apiConfig := api.DefaultConfig()
 	apiConfig.Address = config.Address
 
-	client, err := vault.NewClient(apiConfig)
+	client, err := api.NewClient(apiConfig)
 	if err != nil {
 		return nil, err
 	}
 	client.SetToken(config.Token)
 
-	return &SecretFetcher{
-		VaultClient: client.Logical(),
-		Prefix:      config.Prefix,
-		Logger:      p.Logger,
-	}, nil
+	return vault.NewSecretStore(client.Logical(), p.Logger, vault.WithPrefix(config.Prefix)), nil
 }

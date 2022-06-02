@@ -58,17 +58,17 @@ To set a config option in the vault.yml file, use the config subcommand.`, cli),
 			p.Logger = log.New(cmd.OutOrStderr(), "", 0)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			secretFetcher, err := p.LoadSecretFetcher()
+			secretFetcher, err := p.LoadSecretStore()
 			if err != nil {
 				return err
 			}
 
-			secret, err := secretFetcher.Fetch(cmd.Context(), args[0])
+			secret, err := secretFetcher.GetSecret(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}
 
-			fmt.Fprint(cmd.OutOrStdout(), secret)
+			fmt.Fprint(cmd.OutOrStdout(), string(secret))
 			return nil
 		},
 	}

@@ -1,4 +1,4 @@
-package provider
+package vault
 
 import (
 	"context"
@@ -7,31 +7,60 @@ import (
 	"strings"
 
 	vault "github.com/hashicorp/vault/api"
+	"github.com/moby/buildkit/session/secrets"
 )
 
-type VaultClient interface {
+type Client interface {
 	ReadWithContext(ctx context.Context, path string) (*vault.Secret, error)
 }
 
-type SecretFetcher struct {
+var _ secrets.SecretStore = (*VaultSecretStore)(nil)
+
+type VaultSecretStore struct {
 	Prefix      string
-	VaultClient VaultClient
+	VaultClient Client
 	Logger      *log.Logger
 }
 
-func (s *SecretFetcher) Fetch(ctx context.Context, lookup string) (string, error) {
+func NewSecretStore(client Client, logger *log.Logger, opts ...Option) *VaultSecretStore {
+	options := &options{}
+
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	return &VaultSecretStore{
+		Prefix:      options.prefix,
+		VaultClient: client,
+		Logger:      logger,
+	}
+}
+
+type options struct {
+	prefix string
+}
+
+type Option func(*options)
+
+func WithPrefix(prefix string) Option {
+	return func(o *options) {
+		o.prefix = prefix
+	}
+}
+
+func (s *VaultSecretStore) GetSecret(ctx context.Context, lookup string) ([]byte, error) {
 	s.Logger.Printf("got request for: %q\n", lookup)
 
 	vaultPath, vaultField, err := s.vaultPath(lookup)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	s.Logger.Printf("looking for field %q in path %q\n", vaultField, vaultPath)
 
 	return s.readSecretField(ctx, vaultPath, vaultField)
 }
 
-func (s *SecretFetcher) vaultPath(lookup string) (path string, field string, err error) {
+func (s *VaultSecretStore) vaultPath(lookup string) (path string, field string, err error) {
 	fullLookup := strings.Join(append(strings.Split(s.Prefix, "/"), lookup), "/")
 	fullLookup = strings.TrimPrefix(fullLookup, "/")
 
@@ -46,25 +75,25 @@ func (s *SecretFetcher) vaultPath(lookup string) (path string, field string, err
 	return strings.Join(append([]string{pathParts[0], "data"}, pathParts[1:]...), "/"), pathAndField[1], nil
 }
 
-func (s *SecretFetcher) readSecretField(ctx context.Context, path, field string) (string, error) {
+func (s *VaultSecretStore) readSecretField(ctx context.Context, path, field string) ([]byte, error) {
 	secret, err := s.VaultClient.ReadWithContext(ctx, path)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if secret == nil {
-		return "", ErrNotFound
+		return nil, secrets.ErrNotFound
 	}
 
 	data, ok := secret.Data["data"].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("malformed secret data")
+		return nil, fmt.Errorf("malformed secret data")
 	}
 
 	value, ok := data[field].(string)
 	if !ok {
-		return "", fmt.Errorf("malformed secret value")
+		return nil, fmt.Errorf("malformed secret value")
 	}
 
-	return value, nil
+	return []byte(value), nil
 }
