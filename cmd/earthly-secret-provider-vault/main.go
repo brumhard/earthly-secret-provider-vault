@@ -45,8 +45,14 @@ To set a config option in the vault.yml file, use the config subcommand.`, cli),
 		// don't show errors and usage on errors in any RunE function.
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return p.PrintSecret()
+		Args:          cobra.ExactArgs(1),
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Enable swapping out stdout/stderr for testing
+			p.Out = cmd.OutOrStdout()
+			p.Err = cmd.OutOrStderr()
+		},
+		RunE: func(_ *cobra.Command, args []string) error {
+			return p.PrintSecret(args)
 		},
 	}
 

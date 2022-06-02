@@ -3,6 +3,7 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,13 +39,16 @@ func (c *VaultConfig) Validate() error {
 	return nil
 }
 
-type Provider struct{}
+type Provider struct {
+	Out io.Writer
+	Err io.Writer
+}
 
 func New() *Provider {
 	return &Provider{}
 }
 
-func (p *Provider) PrintSecret() error {
+func (p *Provider) PrintSecret(args []string) error {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -77,12 +81,12 @@ func (p *Provider) PrintSecret() error {
 	}
 	client.SetToken(config.Token)
 
-	lookup := os.Args[1]
-	fmt.Printf("got request for: %s\n", lookup)
+	lookup := args[0]
+	fmt.Fprintf(p.Err, "got request for: %s\n", lookup)
 
 	fullLookup := strings.Join(append(strings.Split(config.Prefix, "/"), lookup), "/")
 	fullLookup = strings.TrimPrefix(fullLookup, "/")
-	fmt.Printf("full lookup path with prefix: %s\n", fullLookup)
+	fmt.Fprintf(p.Err, "full lookup path with prefix: %s\n", fullLookup)
 
 	pathAndField := strings.SplitN(fullLookup, ".", 2)
 	if len(pathAndField) != 2 {
@@ -113,7 +117,7 @@ func (p *Provider) PrintSecret() error {
 		return fmt.Errorf("malformed secret value")
 	}
 
-	fmt.Println(value)
+	fmt.Fprint(p.Out, value)
 
 	return nil
 }
