@@ -4,6 +4,7 @@ import (
 	"earthly-vault-provider/pkg/provider"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -48,11 +49,21 @@ To set a config option in the vault.yml file, use the config subcommand.`, cli),
 		Args:          cobra.ExactArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Enable swapping out stdout/stderr for testing
-			p.Out = cmd.OutOrStdout()
-			p.Err = cmd.OutOrStderr()
+			p.Logger = log.New(cmd.OutOrStderr(), "", 0)
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
-			return p.PrintSecret(args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			secretFetcher, err := p.LoadSecretFetcher()
+			if err != nil {
+				return err
+			}
+
+			secret, err := secretFetcher.Fetch(args[0])
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprint(cmd.OutOrStdout(), secret)
+			return nil
 		},
 	}
 
