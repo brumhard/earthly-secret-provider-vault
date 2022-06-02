@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const cli = "earthly-secret-provider-vault"
+
 func main() {
 	cmd := buildRootCommand()
 	if err := cmd.Execute(); err != nil {
@@ -26,20 +28,20 @@ func buildRootCommand() *cobra.Command {
 	p := provider.New()
 
 	cmd := &cobra.Command{
-		Use:   "earthly-secret-provider-vault",
-		Short: "earthly-secret-provider-vault is a secret provider for Earthly that connects to Vault",
-		Long: `earthly-secret-provider-vault is a secret provider for Earthly that connects to Hashicorp's Vault.
+		Use:   cli,
+		Short: fmt.Sprintf("%s is a secret provider for Earthly that connects to Vault", cli),
+		Long: fmt.Sprintf(`%[1]s is a secret provider for Earthly that connects to Hashicorp's Vault.
 For docs on how to configure this take a look here: https://docs.earthly.dev/docs/earthly-config#secret_provider-experimental.
 
 Since the contract for secret providers is fairly simple you can test this provider by running:
-		$ earthly-secret-provider-vault <vault-path>
+		$ %[1]s <vault-path>
 This print the secret on stdout.
 
 Generally the CLI will look at ~/.vault-token and ~/.earthly/vault.yml for the configuration.
 The token from ~/.vault-token will be used if it exists, otherwise the token from ~/.earthly/vault.yml will be used.
 vault.yml should be used to set the Vault address and optionally a lookup secret can be added.
 
-To set a config option in the vault.yml file, use the config subcommand.`,
+To set a config option in the vault.yml file, use the config subcommand.`, cli),
 		// don't show errors and usage on errors in any RunE function.
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -47,6 +49,8 @@ To set a config option in the vault.yml file, use the config subcommand.`,
 			return p.PrintSecret()
 		},
 	}
+
+	cmd.AddCommand(buildVersionCommand())
 
 	return cmd
 }
