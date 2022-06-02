@@ -1,4 +1,4 @@
-package main
+package provider
 
 import (
 	"errors"
@@ -16,18 +16,6 @@ import (
 var ErrNotFound = errors.New("secret not found")
 
 const vaultConfigFile = "vault.yml"
-
-func main() {
-	if err := run(); err != nil {
-		if errors.Is(err, ErrNotFound) {
-			// expected case, exit 2 indicates that next secret provider can be queried
-			os.Exit(2)
-		}
-
-		fmt.Fprintf(os.Stderr, "an error occurred: %s\n", err)
-		os.Exit(1)
-	}
-}
 
 type VaultConfig struct {
 	// Token is a token that is used to authenticate with Vault.
@@ -50,7 +38,13 @@ func (c *VaultConfig) Validate() error {
 	return nil
 }
 
-func run() error {
+type Provider struct{}
+
+func New() *Provider {
+	return &Provider{}
+}
+
+func (p *Provider) PrintSecret() error {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -100,7 +94,6 @@ func run() error {
 	// insert "data" after the first item in the path
 	vaultPath := strings.Join(append([]string{pathParts[0], "data"}, pathParts[1:]...), "/")
 
-	// Reading a secret
 	secret, err := client.Logical().Read(vaultPath)
 	if err != nil {
 		return err
