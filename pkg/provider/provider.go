@@ -2,11 +2,9 @@ package provider
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/earthly/earthly/util/cliutil"
 	vault "github.com/hashicorp/vault/api"
@@ -49,16 +47,6 @@ func New() *Provider {
 	return &Provider{}
 }
 
-type VaultClient interface {
-	Read(path string) (*vault.Secret, error)
-}
-
-type SecretFetcher struct {
-	Config      *Config
-	VaultClient VaultClient
-	logger      *log.Logger
-}
-
 func (p *Provider) LoadSecretFetcher() (*SecretFetcher, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
@@ -94,57 +82,7 @@ func (p *Provider) LoadSecretFetcher() (*SecretFetcher, error) {
 
 	return &SecretFetcher{
 		VaultClient: client.Logical(),
-		Config:      &config,
-		logger:      p.Logger,
+		Prefix:      config.Prefix,
+		Logger:      p.Logger,
 	}, nil
-}
-
-func (s *SecretFetcher) Fetch(lookup string) (string, error) {
-	s.logger.Printf("got request for: %q\n", lookup)
-
-	vaultPath, vaultField, err := s.vaultPath(lookup)
-	if err != nil {
-		return "", err
-	}
-	s.logger.Printf("looking for field %q in path %q\n", vaultField, vaultPath)
-
-	return s.readSecretField(vaultPath, vaultField)
-}
-
-func (s *SecretFetcher) vaultPath(lookup string) (path string, field string, err error) {
-	fullLookup := strings.Join(append(strings.Split(s.Config.Prefix, "/"), lookup), "/")
-	fullLookup = strings.TrimPrefix(fullLookup, "/")
-
-	pathAndField := strings.SplitN(fullLookup, ".", 2)
-	if len(pathAndField) != 2 {
-		return "", "", fmt.Errorf("invalid input: %s", fullLookup)
-	}
-
-	pathParts := strings.Split(pathAndField[0], "/")
-
-	// insert "data" after the first item in the path
-	return strings.Join(append([]string{pathParts[0], "data"}, pathParts[1:]...), "/"), pathAndField[1], nil
-}
-
-func (s *SecretFetcher) readSecretField(path, field string) (string, error) {
-	secret, err := s.VaultClient.Read(path)
-	if err != nil {
-		return "", err
-	}
-
-	if secret == nil {
-		return "", ErrNotFound
-	}
-
-	data, ok := secret.Data["data"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("malformed secret data")
-	}
-
-	value, ok := data[field].(string)
-	if !ok {
-		return "", fmt.Errorf("malformed secret value")
-	}
-
-	return value, nil
 }

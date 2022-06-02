@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"earthly-vault-provider/pkg/provider"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -13,8 +16,11 @@ import (
 const cli = "earthly-secret-provider-vault"
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	cmd := buildRootCommand()
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.ExecuteContext(ctx); err != nil {
 		if errors.Is(err, provider.ErrNotFound) {
 			// expected case, exit 2 indicates that next secret provider can be queried
 			os.Exit(2)
@@ -57,7 +63,7 @@ To set a config option in the vault.yml file, use the config subcommand.`, cli),
 				return err
 			}
 
-			secret, err := secretFetcher.Fetch(args[0])
+			secret, err := secretFetcher.Fetch(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}
