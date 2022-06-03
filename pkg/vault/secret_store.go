@@ -49,13 +49,13 @@ func WithPrefix(prefix string) Option {
 }
 
 func (s *VaultSecretStore) GetSecret(ctx context.Context, lookup string) ([]byte, error) {
-	s.Logger.Printf("got request for: %q\n", lookup)
+	s.Logger.Printf("Got request for: %q\n", lookup)
 
 	vaultPath, vaultField, err := s.vaultPath(lookup)
 	if err != nil {
 		return nil, err
 	}
-	s.Logger.Printf("looking for field %q in path %q\n", vaultField, vaultPath)
+	s.Logger.Printf("Looking for field %q in path %q\n", vaultField, vaultPath)
 
 	return s.readSecretField(ctx, vaultPath, vaultField)
 }

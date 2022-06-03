@@ -20,7 +20,7 @@ import (
 
 const vaultConfigFile = "vault.yml"
 
-var cfgFilePath = filepath.Join(cliutil.GetEarthlyDir(), vaultConfigFile)
+var CfgFilePath = filepath.Join(cliutil.GetEarthlyDir(), vaultConfigFile)
 
 var ErrInvalidConfig = errors.New("invalid config")
 
@@ -68,9 +68,9 @@ func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 	token, _ := os.ReadFile(filepath.Join(homeDir, ".vault-token"))
 	config := Config{Token: string(token)}
 
-	cfgFile, err := os.Open(cfgFilePath)
+	cfgFile, err := os.Open(CfgFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open config file: %w", ErrInvalidConfig)
 	}
 	defer cfgFile.Close()
 
@@ -96,7 +96,7 @@ func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 
 func (p *Provider) SetConfigKey(key, value string) error {
 	// read the config and create the file if it doesn't exist yet
-	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDWR|os.O_CREATE, 0600)
+	cfgFile, err := os.OpenFile(CfgFilePath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("failed opening or creating config file: %w", err)
 	}
