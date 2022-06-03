@@ -1,5 +1,4 @@
-// TODO: update
-module earthly-vault-provider
+module github.com/brumhard/earthly-secret-provider-vault
 
 go 1.18
 

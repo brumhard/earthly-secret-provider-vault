@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"earthly-vault-provider/pkg/provider"
 	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/brumhard/earthly-secret-provider-vault/pkg/provider"
 
 	"github.com/moby/buildkit/session/secrets"
 )

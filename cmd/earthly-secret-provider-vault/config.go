@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"earthly-vault-provider/pkg/provider"
+	"github.com/brumhard/earthly-secret-provider-vault/pkg/provider"
 
 	"github.com/spf13/cobra"
 )

@@ -1,9 +1,10 @@
 package main
 
 import (
-	"earthly-vault-provider/pkg/provider"
 	"fmt"
 	"log"
+
+	"github.com/brumhard/earthly-secret-provider-vault/pkg/provider"
 
 	"github.com/spf13/cobra"
 )

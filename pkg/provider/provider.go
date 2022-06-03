@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"earthly-vault-provider/pkg/vault"
+	"github.com/brumhard/earthly-secret-provider-vault/pkg/vault"
 
 	"github.com/earthly/earthly/util/cliutil"
 	"github.com/hashicorp/vault/api"
