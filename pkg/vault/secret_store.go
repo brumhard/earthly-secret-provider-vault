@@ -62,7 +62,7 @@ func (s *VaultSecretStore) GetSecret(ctx context.Context, lookup string) ([]byte
 
 func (s *VaultSecretStore) vaultPath(lookup string) (path string, field string, err error) {
 	fullLookup := strings.Join(append(strings.Split(s.Prefix, "/"), lookup), "/")
-	fullLookup = strings.TrimPrefix(fullLookup, "/")
+	fullLookup = strings.TrimLeft(fullLookup, "/")
 
 	pathAndField := strings.SplitN(fullLookup, ".", 2)
 	if len(pathAndField) != 2 {
