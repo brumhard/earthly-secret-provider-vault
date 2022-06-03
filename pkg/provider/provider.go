@@ -2,7 +2,10 @@ package provider
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -19,22 +22,28 @@ const vaultConfigFile = "vault.yml"
 
 var cfgFilePath = filepath.Join(cliutil.GetEarthlyDir(), vaultConfigFile)
 
+var ErrInvalidConfig = errors.New("invalid config")
+
 type Config struct {
 	// Token is a token that is used to authenticate with Vault.
-	Token string `yaml:"token"`
+	Token string `yaml:"token,omitempty"`
 	// Address is the address of the Vault server.
-	Address string `yaml:"address"`
+	Address string `yaml:"address,omitempty"`
 	// Prefix will be prepended to any secret that is passed in
-	Prefix string `yaml:"prefix"`
+	Prefix string `yaml:"prefix,omitempty"`
 }
 
 func (c *Config) Validate() error {
 	if c.Token == "" {
-		return errors.New("token is required")
+		return fmt.Errorf("token is required: %w", ErrInvalidConfig)
 	}
 
 	if c.Address == "" {
-		return errors.New("address is required")
+		return fmt.Errorf("address is required: %w", ErrInvalidConfig)
+	}
+
+	if _, err := url.ParseRequestURI(c.Address); err != nil {
+		return fmt.Errorf("address %q should be a valid URL: %w", c.Address, ErrInvalidConfig)
 	}
 
 	return nil
@@ -63,6 +72,7 @@ func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer cfgFile.Close()
 
 	if err := yaml.NewDecoder(cfgFile).Decode(&config); err != nil {
 		return nil, err
@@ -82,4 +92,47 @@ func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 	client.SetToken(config.Token)
 
 	return vault.NewSecretStore(client.Logical(), p.Logger, vault.WithPrefix(config.Prefix)), nil
+}
+
+func (p *Provider) SetConfigKey(key, value string) error {
+	// read the config and create the file if it doesn't exist yet
+	cfgFile, err := os.OpenFile(cfgFilePath, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return fmt.Errorf("failed opening or creating config file: %w", err)
+	}
+	defer cfgFile.Close()
+
+	config := Config{}
+	err = yaml.NewDecoder(cfgFile).Decode(&config)
+	// if it's an EOF error just proceed since the file probably just got created and is empty
+	if err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("failed reading config file: %w", err)
+	}
+
+	switch key {
+	case "token":
+		config.Token = value
+	case "address":
+		config.Address = value
+	case "prefix":
+		config.Prefix = value
+	default:
+		return fmt.Errorf("key %q is not supported: %w", key, ErrInvalidConfig)
+	}
+
+	// delete file content and reset I/O offset to 0
+	if err := cfgFile.Truncate(0); err != nil {
+		return fmt.Errorf("failed truncating config file before write: %w", err)
+	}
+
+	if _, err := cfgFile.Seek(0, 0); err != nil {
+		return err
+	}
+
+	// write new config to now empty file
+	if err := yaml.NewEncoder(cfgFile).Encode(&config); err != nil {
+		return fmt.Errorf("failed writing config file: %w", err)
+	}
+
+	return nil
 }
