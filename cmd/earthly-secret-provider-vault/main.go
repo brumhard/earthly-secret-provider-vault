@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/moby/buildkit/session/secrets"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +22,7 @@ func main() {
 
 	cmd := buildRootCommand()
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		if errors.Is(err, provider.ErrNotFound) {
+		if errors.Is(err, secrets.ErrNotFound) {
 			// expected case, exit 2 indicates that next secret provider can be queried
 			os.Exit(2)
 		}

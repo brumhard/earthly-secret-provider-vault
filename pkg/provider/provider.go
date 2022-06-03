@@ -15,8 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var ErrNotFound = errors.New("secret not found")
-
 const vaultConfigFile = "vault.yml"
 
 var cfgFilePath = filepath.Join(cliutil.GetEarthlyDir(), vaultConfigFile)
