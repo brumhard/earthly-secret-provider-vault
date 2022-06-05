@@ -18,9 +18,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const vaultConfigFile = "vault.yml"
+const (
+	vaultConfigFile       = "vault.yml"
+	configFilePermissions = 0600
+)
 
-var CfgFilePath = filepath.Join(cliutil.GetEarthlyDir(), vaultConfigFile)
+func CfgFilePath() string {
+	return filepath.Join(cliutil.GetEarthlyDir(), vaultConfigFile)
+}
 
 var ErrInvalidConfig = errors.New("invalid config")
 
@@ -68,7 +73,7 @@ func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 	token, _ := os.ReadFile(filepath.Join(homeDir, ".vault-token"))
 	config := Config{Token: string(token)}
 
-	cfgFile, err := os.Open(CfgFilePath)
+	cfgFile, err := os.Open(CfgFilePath())
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", ErrInvalidConfig)
 	}
@@ -96,7 +101,7 @@ func (p *Provider) LoadSecretStore() (secrets.SecretStore, error) {
 
 func (p *Provider) SetConfigKey(key, value string) error {
 	// read the config and create the file if it doesn't exist yet
-	cfgFile, err := os.OpenFile(CfgFilePath, os.O_RDWR|os.O_CREATE, 0600)
+	cfgFile, err := os.OpenFile(CfgFilePath(), os.O_RDWR|os.O_CREATE, configFilePermissions)
 	if err != nil {
 		return fmt.Errorf("failed opening or creating config file: %w", err)
 	}

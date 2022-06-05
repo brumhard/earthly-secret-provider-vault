@@ -16,8 +16,7 @@ import (
 const cli = "earthly-secret-provider-vault"
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 	cmd := buildRootCommand()
 	if err := cmd.ExecuteContext(ctx); err != nil {
@@ -28,7 +27,12 @@ func main() {
 
 		fmt.Fprintf(os.Stderr, "An error occurred: %s\n", err)
 		if errors.Is(err, provider.ErrInvalidConfig) {
-			fmt.Fprintf(os.Stderr, "Please use %s config first to set required options or edit the config at %s directly.\n", cli, provider.CfgFilePath)
+			fmt.Fprintf(
+				os.Stderr,
+				"Please use %s config first to set required options or edit the config at %s directly.\n",
+				cli,
+				provider.CfgFilePath(),
+			)
 		}
 		os.Exit(1)
 	}

@@ -2,12 +2,18 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/moby/buildkit/session/secrets"
+)
+
+var (
+	ErrInvalidInput    = errors.New("invalid input")
+	ErrMalformedSecret = errors.New("malformed secret")
 )
 
 type Client interface {
@@ -60,13 +66,13 @@ func (s *SecretStore) GetSecret(ctx context.Context, lookup string) ([]byte, err
 	return s.readSecretField(ctx, vaultPath, vaultField)
 }
 
-func (s *SecretStore) vaultPath(lookup string) (path string, field string, err error) {
+func (s *SecretStore) vaultPath(lookup string) (path, field string, err error) {
 	fullLookup := strings.Join(append(strings.Split(s.Prefix, "/"), lookup), "/")
 	fullLookup = strings.TrimLeft(fullLookup, "/")
 
 	pathAndField := strings.SplitN(fullLookup, ".", 2)
 	if len(pathAndField) != 2 {
-		return "", "", fmt.Errorf("invalid input: %s", fullLookup)
+		return "", "", fmt.Errorf("%s: %w", fullLookup, ErrInvalidInput)
 	}
 
 	pathParts := strings.Split(pathAndField[0], "/")
@@ -87,12 +93,12 @@ func (s *SecretStore) readSecretField(ctx context.Context, path, field string) (
 
 	data, ok := secret.Data["data"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("malformed secret data")
+		return nil, ErrMalformedSecret
 	}
 
 	value, ok := data[field].(string)
 	if !ok {
-		return nil, fmt.Errorf("malformed secret value")
+		return nil, ErrMalformedSecret
 	}
 
 	return []byte(value), nil
