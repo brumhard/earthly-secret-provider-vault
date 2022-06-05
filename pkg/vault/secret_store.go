@@ -14,22 +14,22 @@ type Client interface {
 	ReadWithContext(ctx context.Context, path string) (*vault.Secret, error)
 }
 
-var _ secrets.SecretStore = (*VaultSecretStore)(nil)
+var _ secrets.SecretStore = (*SecretStore)(nil)
 
-type VaultSecretStore struct {
+type SecretStore struct {
 	Prefix      string
 	VaultClient Client
 	Logger      *log.Logger
 }
 
-func NewSecretStore(client Client, logger *log.Logger, opts ...Option) *VaultSecretStore {
+func NewSecretStore(client Client, logger *log.Logger, opts ...Option) *SecretStore {
 	options := &options{}
 
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	return &VaultSecretStore{
+	return &SecretStore{
 		Prefix:      options.prefix,
 		VaultClient: client,
 		Logger:      logger,
@@ -48,7 +48,7 @@ func WithPrefix(prefix string) Option {
 	}
 }
 
-func (s *VaultSecretStore) GetSecret(ctx context.Context, lookup string) ([]byte, error) {
+func (s *SecretStore) GetSecret(ctx context.Context, lookup string) ([]byte, error) {
 	s.Logger.Printf("Got request for: %q\n", lookup)
 
 	vaultPath, vaultField, err := s.vaultPath(lookup)
@@ -60,7 +60,7 @@ func (s *VaultSecretStore) GetSecret(ctx context.Context, lookup string) ([]byte
 	return s.readSecretField(ctx, vaultPath, vaultField)
 }
 
-func (s *VaultSecretStore) vaultPath(lookup string) (path string, field string, err error) {
+func (s *SecretStore) vaultPath(lookup string) (path string, field string, err error) {
 	fullLookup := strings.Join(append(strings.Split(s.Prefix, "/"), lookup), "/")
 	fullLookup = strings.TrimLeft(fullLookup, "/")
 
@@ -75,7 +75,7 @@ func (s *VaultSecretStore) vaultPath(lookup string) (path string, field string, 
 	return strings.Join(append([]string{pathParts[0], "data"}, pathParts[1:]...), "/"), pathAndField[1], nil
 }
 
-func (s *VaultSecretStore) readSecretField(ctx context.Context, path, field string) ([]byte, error) {
+func (s *SecretStore) readSecretField(ctx context.Context, path, field string) ([]byte, error) {
 	secret, err := s.VaultClient.ReadWithContext(ctx, path)
 	if err != nil {
 		return nil, err
