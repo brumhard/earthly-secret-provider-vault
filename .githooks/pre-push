@@ -1,12 +1,5 @@
 #!/bin/bash
 
-STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "\.go$")
-
-# only lint if Go files have changed
-if [ "$STAGED_GO_FILES" = "" ]; then
-  exit 0
-fi
-
 # inform about failed linting step
 function failed {
   echo ''
