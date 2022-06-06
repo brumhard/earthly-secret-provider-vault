@@ -42,10 +42,6 @@ build-test:
     RUN --mount=type=cache,target=$GOCACHE \
         go build -ldflags="-w -s" -o /dev/null ./...
 
-multiarch:
-    BUILD --platform=linux/amd64 +docker
-    BUILD --platform=linux/arm/v7 +docker
-
 docker:
     ARG TARGETPLATFORM
     ARG TARGETOS
@@ -63,6 +59,13 @@ docker:
     ARG EARTHLY_GIT_SHORT_HASH
     ARG DOCKER_TAG=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push $DOCKER_REPO:$DOCKER_TAG
+
+multiarch-docker:
+    ARG EARTHLY_GIT_SHORT_HASH
+    ARG DOCKER_TAG=$EARTHLY_GIT_SHORT_HASH
+    BUILD --platform=linux/amd64 +docker --DOCKER_TAG=$DOCKER_TAG
+    BUILD --platform=linux/arm64 +docker --DOCKER_TAG=$DOCKER_TAG
+    BUILD --platform=linux/arm/v7 +docker --DOCKER_TAG=$DOCKER_TAG
 
 lint:
     ARG GOLANGCI_LINT_CACHE=/golangci-cache
@@ -99,19 +102,26 @@ all:
     BUILD +deps
     BUILD +lint
     BUILD +coverage
-    BUILD +docker
+
+trigger-release:
+    ## TODO: don't rely on LOCALLY
+    LOCALLY
+    RUN git tag $(svu n)
+    RUN git push --tags
 
 release:
-    FROM node:alpine
-    RUN apk --no-cache --update add git openssh
-    RUN npm install -g \
-        semantic-release \
-        @semantic-release/git \
-        @semantic-release/github
-    WORKDIR /src
-    COPY --dir .git/ .releaserc.yml .
-    RUN --secret $GITHUB_TOKEN \
-        false
+    FROM +deps
+    RUN apk add --no-cache --update git
+    COPY +svu/svu $BINPATH
+    COPY +goreleaser/goreleaser $BINPATH
+    COPY --dir .git/ pkg/ cmd/ .goreleaser.yaml .
+    RUN svu current > VERSION
+    RUN --push \
+        --secret GITHUB_TOKEN \
+        --mount=type=cache,target=$GOCACHE \
+        goreleaser release --rm-dist --skip-validate
+    BUILD --push +multiarch-docker --DOCKER_TAG=$(cat VERSION)
+
 
 lint-commit:
     FROM node:alpine
@@ -129,3 +139,11 @@ lint-commit:
 golangci-lint:
     FROM golangci/golangci-lint:v1.46.2
     SAVE ARTIFACT /usr/bin/golangci-lint
+
+svu:
+    FROM ghcr.io/caarlos0/svu:v1.9.0
+    SAVE ARTIFACT /usr/local/bin/svu
+
+goreleaser:
+    FROM goreleaser/goreleaser:v1.9.2
+    SAVE ARTIFACT /usr/bin/goreleaser

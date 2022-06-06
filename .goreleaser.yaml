@@ -1,0 +1,76 @@
+project_name: earthly-secret-provider-vault
+
+snapshot:
+  name_template: "{{ .Tag }}-SNAPSHOT"
+
+dist: bin
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    main: ./cmd/earthly-secret-provider-vault
+    ldflags:
+      - -s
+      - -w
+      - -extldflags "-static"
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "7"
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+# release single binary for darwin
+universal_binaries:
+  - replace: true
+
+# overwrite resulting binary names
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    format: binary
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: New Features and updates
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: Bug fixes
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 10
+    - title: Documentation updates
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 20
+    - title: Other Work
+      order: 999
+  filters:
+    # Commit messages matching the regexp listed here will be removed from
+    # the changelog
+    exclude:
+      - "^refactor:"
+      - "^chore"
+
+release:
+  # replace existing releases with same tag
+  mode: replace
+  footer: |
+    **Full Changelog**: https://github.com/goreleaser/goreleaser/compare/{{ .PreviousTag }}...{{ .Tag }}
