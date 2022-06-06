@@ -60,12 +60,22 @@ docker:
     ARG DOCKER_TAG=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push $DOCKER_REPO:$DOCKER_TAG
 
+earthly:
+    # earthly is only available as linux/amd64
+    FROM earthly/earthly:v0.6.15
+    COPY +build/$NAME /usr/bin/$NAME
+    RUN earthly config global.secret_provider $NAME
+    ARG EARTHLY_GIT_SHORT_HASH
+    ARG DOCKER_TAG=$EARTHLY_GIT_SHORT_HASH
+    SAVE IMAGE --push $DOCKER_REPO:$DOCKER_TAG-full
+
 multiarch-docker:
     ARG EARTHLY_GIT_SHORT_HASH
     ARG DOCKER_TAG=$EARTHLY_GIT_SHORT_HASH
     BUILD --platform=linux/amd64 +docker --DOCKER_TAG=$DOCKER_TAG
     BUILD --platform=linux/arm64 +docker --DOCKER_TAG=$DOCKER_TAG
     BUILD --platform=linux/arm/v7 +docker --DOCKER_TAG=$DOCKER_TAG
+    BUILD +earthly --DOCKER_TAG=$DOCKER_TAG
 
 lint:
     ARG GOLANGCI_LINT_CACHE=/golangci-cache
