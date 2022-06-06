@@ -101,6 +101,27 @@ all:
     BUILD +coverage
     BUILD +docker
 
+release:
+    FROM node:alpine
+    RUN apk --no-cache --update add git openssh
+    RUN npm install -g \
+        semantic-release \
+        @semantic-release/git \
+        @semantic-release/github
+    WORKDIR /src
+    COPY --dir .git/ .releaserc.yml .
+    RUN --secret $GITHUB_TOKEN \
+        false
+
+lint-commit:
+    FROM node:alpine
+    RUN apk --no-cache --update add git
+    RUN npm install -g @commitlint/cli @commitlint/config-conventional
+    WORKDIR /src
+    COPY --dir .git/ .
+    # check all commits to be in the right format
+    RUN commitlint --to HEAD --verbose -x @commitlint/config-conventional
+
 ###########
 # helper
 ###########

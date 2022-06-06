@@ -1,0 +1,8 @@
+branches:
+  - main
+repositoryUrl: https://github.com/brumhard/earthly-secret-provider-vault.git
+plugins:
+  - "@semantic-release/commit-analyzer"
+  - "@semantic-release/release-notes-generator"
+  - ["@semantic-release/github", { "assets": ["dist/**"] }]
+  - "@semantic-release/git"

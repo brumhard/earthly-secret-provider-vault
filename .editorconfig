@@ -21,7 +21,7 @@ indent_size = 2
 indent_style = space
 indent_size = 4
 
-[{*.sh,pre-push}]
+[{*.sh,pre-push,pre-commit}]
 # we choose the google style guide here: https://google.github.io/styleguide/shellguide.html
 indent_style = space
 indent_size = 2
