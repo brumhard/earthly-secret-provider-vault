@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func buildVersionCommand() *cobra.Command {
+func BuildVersionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: fmt.Sprintf("Print the version number of %s", cli),
-		Long:  fmt.Sprintf("All software has versions. This is %s's.", cli),
+		Short: fmt.Sprintf("Print the version number of %s", CLI),
+		Long:  fmt.Sprintf("All software has versions. This is %s's.", CLI),
 		Run: func(cmd *cobra.Command, args []string) {
 			if bi, ok := debug.ReadBuildInfo(); ok {
 				fmt.Printf("%+v\n", bi)

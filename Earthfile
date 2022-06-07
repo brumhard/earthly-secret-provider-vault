@@ -108,6 +108,11 @@ coverage-html:
     COPY +test-output/cover.out out/cover.out
     RUN go tool cover -html=out/cover.out
 
+generate:
+    COPY +build/docgen $BINPATH
+    RUN mkdir -p docs && docgen -o docs
+    SAVE ARTIFACT docs AS LOCAL docs
+
 all:
     BUILD +deps
     BUILD +lint

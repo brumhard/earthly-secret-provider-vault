@@ -8,17 +8,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/brumhard/earthly-secret-provider-vault/cmd/earthly-secret-provider-vault/app"
 	"github.com/brumhard/earthly-secret-provider-vault/pkg/provider"
 
 	"github.com/moby/buildkit/session/secrets"
 )
 
-const cli = "earthly-secret-provider-vault"
-
 func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	cmd := buildRootCommand()
+	cmd := app.BuildRootCommand()
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		if errors.Is(err, secrets.ErrNotFound) {
 			// expected case, exit 2 indicates that next secret provider can be queried
@@ -30,7 +29,7 @@ func main() {
 			fmt.Fprintf(
 				os.Stderr,
 				"Please use %s config first to set required options or edit the config at %s directly.\n",
-				cli,
+				app.CLI,
 				provider.CfgFilePath(),
 			)
 		}
